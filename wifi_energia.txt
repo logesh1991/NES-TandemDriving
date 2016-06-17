@@ -1,0 +1,71 @@
+#include <WiFi.h>
+#include <Wire.h>
+#include <BMA222.h>
+
+char ssid[] = "ammar";
+//char password[] = "vastcartoon245";
+unsigned int localPort = 2390;
+IPAddress ip;
+long rssi;
+
+WiFiUDP Udp;
+BMA222 mySensor;
+
+void setup()
+{
+  mySensor.begin();
+  uint8_t chipID = mySensor.chipID();
+  
+  pinMode(RED_LED, OUTPUT); 
+  pinMode(YELLOW_LED, OUTPUT);
+  pinMode(GREEN_LED, OUTPUT);
+  
+  digitalWrite(RED_LED, LOW);
+  digitalWrite(YELLOW_LED, LOW);
+  digitalWrite(GREEN_LED, LOW);
+  
+  Serial.begin(9600);
+  
+  WiFi.begin(ssid);
+  while ( WiFi.status() != WL_CONNECTED) {
+    digitalWrite(YELLOW_LED, HIGH);
+    delay(150);
+    digitalWrite(YELLOW_LED, LOW);
+    delay(150);
+  }
+  digitalWrite(YELLOW_LED, HIGH);
+  
+  while (WiFi.localIP() == INADDR_NONE) {
+    digitalWrite(GREEN_LED, HIGH);
+    delay(150);
+    digitalWrite(GREEN_LED, LOW);
+    delay(150);
+  }
+  digitalWrite(GREEN_LED, HIGH);
+  
+  Udp.begin(localPort);
+}
+
+void loop()
+{
+  ip = WiFi.localIP();
+  rssi = WiFi.RSSI();
+  int8_t acclX = mySensor.readXData();
+  int8_t acclY = mySensor.readYData();
+  int8_t acclZ = mySensor.readZData();
+  
+  Udp.beginPacket("130.149.224.2", 42679);
+  Udp.print("{ rssi: '");
+  Udp.print(rssi);
+  Udp.print("', ip: '");
+  Udp.print(ip);
+  Udp.print("', accl_x: '");
+  Udp.print(acclX);
+  Udp.print("', accl_y: '");
+  Udp.print(acclY);
+  Udp.print("', accl_z: '");
+  Udp.print(acclZ);
+  Udp.print("' }");
+  Udp.endPacket();
+  delay(10);
+}
